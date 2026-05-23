@@ -1,2 +1,6 @@
-# Overrides default.yaml: shorter run — 2.6 M params overfits fast at 0.7% positive prevalence.
+# Overrides default.yaml: shorter run (2.6 M params overfits fast at 0.7% prevalence),
+# lower peak LR, ~10% linear warmup, longer early-stop patience.
 epochs: 25
+learning_rate: 1.0e-4
+warmup_epochs: 3
+early_stopping_patience: 15

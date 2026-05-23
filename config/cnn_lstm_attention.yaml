@@ -1,2 +1,5 @@
-# Overrides default.yaml: epoch budget only; everything else inherited from defaults.
+# Overrides default.yaml: epoch budget, lower peak LR, ~10% linear warmup, longer early-stop patience.
 epochs: 30
+learning_rate: 1.0e-4
+warmup_epochs: 3
+early_stopping_patience: 15

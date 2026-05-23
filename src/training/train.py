@@ -273,7 +273,18 @@ def main() -> None:
         weight_decay=float(cfg["weight_decay"]),
     )
     total_steps = max(len(train_loader) * int(cfg["epochs"]), 1)
-    warmup_steps = max(int(0.1 * total_steps), 1)
+    # Warmup duration is configurable via cfg["warmup_epochs"]; the legacy
+    # 10%-of-total-steps default kicks in if the key is absent so older
+    # configs that don't set it keep their previous behavior.
+    warmup_epochs = cfg.get("warmup_epochs")
+    if warmup_epochs is not None:
+        warmup_steps = max(int(float(warmup_epochs) * len(train_loader)), 1)
+    else:
+        warmup_steps = max(int(0.1 * total_steps), 1)
+        warmup_epochs = warmup_steps / max(len(train_loader), 1)
+    logger.info(
+        "warmup: %s epochs = %d steps", warmup_epochs, warmup_steps,
+    )
     scheduler = make_cosine_schedule_with_warmup(
         optimizer,
         num_warmup_steps=warmup_steps,
