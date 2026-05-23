@@ -1,0 +1,34 @@
+# Core scientific stack
+numpy>=1.24,<2.0
+scipy>=1.11
+pandas>=2.0
+
+# Deep learning
+torch>=2.1,<3.0
+torchvision>=0.16
+
+# ECG / signal processing
+wfdb>=4.1
+pywavelets>=1.4
+
+# Configuration and IO
+pyyaml>=6.0
+tqdm>=4.66
+
+# Metrics and ML utilities
+scikit-learn>=1.3
+
+# Plotting
+matplotlib>=3.7
+seaborn>=0.13
+
+# Explainability
+shap>=0.44
+captum>=0.7
+
+# Notebooks
+jupyter>=1.0
+ipykernel>=6.25
+
+# Tests
+pytest>=7.4

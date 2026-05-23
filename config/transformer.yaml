@@ -1,0 +1,2 @@
+# Overrides default.yaml: bumped epoch budget — small transformers converge slower.
+epochs: 40

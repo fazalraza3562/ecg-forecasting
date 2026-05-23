@@ -1,0 +1,43 @@
+# Shared hyperparameters inherited by every model-specific config.
+# Paths are relative to the repository root.
+
+# Where raw and processed data live.
+data_root: data/raw
+processed_root: data/processed
+
+# Signal preprocessing.
+sample_rate_hz: 250          # SDDB native rate; MIT-BIH (360) and INCART (257) are resampled to this.
+bandpass: [0.5, 40]          # Butterworth band-pass in Hz: kills baseline wander and HF noise.
+
+# Forecasting window geometry.
+window_seconds: 60           # Length of the input ECG segment fed to the model.
+horizon_seconds: 30          # Look-ahead in which we ask "will VT/VF onset occur?".
+stride_seconds: 30           # Stride between successive windows on the same record.
+                             # SDDB records are multi-hour Holter traces; a 5 s
+                             # stride produced ~15k near-identical windows per
+                             # record. 30 s keeps a few thousand and avoids the
+                             # OOM we hit on the first preprocessing attempt.
+
+# Onset extraction. SDDB-only: V-beat runs separated by less than this many
+# seconds are treated as the same VT episode and collapsed to a single onset.
+onset_merge_window_seconds: 60
+
+# Patient-disjoint split (train / val / test).
+split_ratios: [0.70, 0.15, 0.15]
+
+# Reproducibility.
+seed: 42
+
+# DataLoader.
+num_workers: 2
+batch_size: 64
+
+# Training defaults (model configs may override).
+epochs: 30
+learning_rate: 1.0e-3
+weight_decay: 1.0e-4
+early_stopping_patience: 5
+amp: true                    # Mixed precision when CUDA is available.
+
+# Loss.
+focal_gamma: 2.0

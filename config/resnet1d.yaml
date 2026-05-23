@@ -1,0 +1,2 @@
+# Overrides default.yaml: shorter run — 2.6 M params overfits fast at 0.7% positive prevalence.
+epochs: 25
