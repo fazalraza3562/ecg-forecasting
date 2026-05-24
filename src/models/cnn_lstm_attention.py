@@ -1,6 +1,11 @@
-"""CNN-LSTM-Attention — the proposed model.
+"""CNN-LSTM-Attention — the proposed model, with a ``use_attention`` toggle.
 
-The model the report's contribution is built on. The motivation is that the
+The model the report's contribution is built on. Setting ``use_attention=False``
+yields a mean-pooled ablation that keeps the CNN-LSTM stack identical but
+replaces the attention head with uniform temporal averaging, so the report
+can isolate what the attention layer is actually contributing.
+
+The motivation is that the
 three families of feature ECG forecasting needs — local morphology (QRS
 shape, ST changes), short-range temporal context (the last few beats), and
 selective focus on the part of the window most predictive of an imminent
@@ -40,8 +45,10 @@ class CNNLSTMAttention(nn.Module):
         hidden_size: int = 64,
         attn_hidden: int = 64,
         head_dropout: float = 0.3,
+        use_attention: bool = True,
     ) -> None:
         super().__init__()
+        self.use_attention = use_attention
         # Stride=1 on every conv; the MaxPool1d(4) layers do all the downsampling.
         # Padding keeps the length identical until the pool, which makes the 4x
         # ratio per block exact and the final T' (234) easy to reason about.
@@ -68,9 +75,15 @@ class CNNLSTMAttention(nn.Module):
         # shared projection into the lower-dimensional attention space. This is
         # the standard formulation but with W reused across h and q, which both
         # halves the parameter count and makes "q lives in h-space" precise.
-        self.attn_W = nn.Linear(h_dim, attn_hidden, bias=False)
-        self.attn_query = nn.Parameter(torch.zeros(h_dim))
-        self.attn_v = nn.Linear(attn_hidden, 1, bias=False)
+        #
+        # We only allocate these parameters when use_attention is on. The
+        # ablation variant pools by mean and therefore has no attention
+        # parameters to learn — checking the param count is the simplest
+        # way to confirm the ablation is structurally honest.
+        if use_attention:
+            self.attn_W = nn.Linear(h_dim, attn_hidden, bias=False)
+            self.attn_query = nn.Parameter(torch.zeros(h_dim))
+            self.attn_v = nn.Linear(attn_hidden, 1, bias=False)
 
         self.head_dropout = nn.Dropout(head_dropout)
         self.head = nn.Linear(h_dim, 1)
@@ -97,15 +110,19 @@ class CNNLSTMAttention(nn.Module):
         x = x.transpose(1, 2)
         seq, _ = self.lstm(x)  # (B, T', 128)
 
-        # Additive attention.
-        h_proj = self.attn_W(seq)                          # (B, T', attn_hidden)
-        q_proj = self.attn_W(self.attn_query)              # (attn_hidden,)
-        scores = self.attn_v(torch.tanh(h_proj + q_proj))  # (B, T', 1)
-        weights = scores.softmax(dim=1)                    # (B, T', 1)
-        context = (weights * seq).sum(dim=1)               # (B, 128)
-
-        # Cache for the explainability notebooks; shape (B, T').
-        self.last_attn_weights = weights.squeeze(-1).detach()
+        if self.use_attention:
+            h_proj = self.attn_W(seq)                          # (B, T', attn_hidden)
+            q_proj = self.attn_W(self.attn_query)              # (attn_hidden,)
+            scores = self.attn_v(torch.tanh(h_proj + q_proj))  # (B, T', 1)
+            weights = scores.softmax(dim=1)                    # (B, T', 1)
+            context = (weights * seq).sum(dim=1)               # (B, 128)
+            # Cache for the explainability notebooks; shape (B, T').
+            self.last_attn_weights = weights.squeeze(-1).detach()
+        else:
+            # Uniform pooling baseline: every time step contributes equally
+            # to the context vector, so the model has to rely on the CNN
+            # and LSTM alone for selectivity.
+            context = seq.mean(dim=1)                          # (B, 128)
 
         pooled = self.head_dropout(context)
         logit = self.head(pooled).squeeze(-1)

@@ -1,0 +1,14 @@
+# Ablation: same CNN-LSTM stack as the proposed model but with mean
+# pooling instead of attention. Lets the report isolate the attention
+# layer's contribution.
+# Overrides default.yaml: epoch budget, lower peak LR, ~10% linear warmup, longer early-stop patience.
+epochs: 30
+learning_rate: 1.0e-4
+warmup_epochs: 3
+early_stopping_patience: 15
+
+# Model-construction args. The MODELS registry dispatches to
+# CNNLSTMAttention(use_attention=False) via a lambda; this block records
+# the choice for anyone reading the config in isolation.
+model_args:
+  use_attention: false

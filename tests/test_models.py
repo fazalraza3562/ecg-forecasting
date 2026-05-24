@@ -65,6 +65,30 @@ def test_cnn_lstm_attention() -> None:
     )
 
 
+def test_cnn_lstm_noattention() -> None:
+    from src.models.cnn_lstm_attention import CNNLSTMAttention
+
+    model = CNNLSTMAttention(use_attention=False).eval()
+    _assert_under_param_budget(model)
+    with torch.no_grad():
+        out = model(_make_batch())
+    _assert_logit_tensor(out)
+
+    # Mean-pool variant: no attention weights cached.
+    assert model.last_attn_weights is None, (
+        f"expected last_attn_weights=None when use_attention=False, "
+        f"got {model.last_attn_weights}"
+    )
+
+    # The ablation must actually drop parameters relative to the full model
+    # — otherwise we'd be lying about what's being ablated.
+    full_params = sum(p.numel() for p in CNNLSTMAttention().parameters())
+    abl_params = sum(p.numel() for p in model.parameters())
+    assert abl_params < full_params, (
+        f"ablation must drop attention params; got abl={abl_params:,} >= full={full_params:,}"
+    )
+
+
 def test_transformer() -> None:
     from src.models.transformer import TransformerEncoderModel
 

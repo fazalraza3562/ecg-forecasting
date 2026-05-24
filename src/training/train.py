@@ -24,7 +24,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import torch
@@ -50,9 +50,14 @@ from src.utils.seed import set_seed
 # Name -> class map. Adding a new model means importing it above and
 # adding one entry here; nothing in this file should special-case any
 # architecture beyond this registry.
-MODELS: dict[str, type[nn.Module]] = {
+MODELS: dict[str, Callable[[], nn.Module]] = {
     "baseline_lstm": BaselineLSTM,
     "cnn_lstm_attention": CNNLSTMAttention,
+    # Ablation that shares the CNN-LSTM body with cnn_lstm_attention but
+    # swaps the attention head for mean pooling. The lambda is the
+    # dispatch — nothing else in the pipeline needs to know it's the
+    # same class.
+    "cnn_lstm_noattention": lambda: CNNLSTMAttention(use_attention=False),
     "transformer": TransformerEncoderModel,
     "resnet1d": ResNet1D,
     "inception1d": InceptionTime1D,
